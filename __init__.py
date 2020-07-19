@@ -60,7 +60,7 @@ if not addon_path in sys.path:
 from . Addon_utils import odcutils
 from . Operators import (classes,  crown, margin, bridge, splint,
                          implant, help, flexible_tooth, bracket_placement, denture_base,
-                         occlusion, ortho, modops_props, model_ops, blockout_undercuts) # , odcmenus, bgl_utils
+                         occlusion, ortho, modops_props, model_ops,splint_2, blockout_undercuts) # , odcmenus, bgl_utils
 from . Panels import panel
 
 
@@ -274,7 +274,7 @@ def stop_playback_restore(scene):
 #Registration :
 ############################################################################################
 
-addon_modules = [panel, blockout_undercuts, model_ops,odcutils, modops_props,classes,  crown, margin, bridge, splint,
+addon_modules = [panel, blockout_undercuts, model_ops,splint_2, odcutils, modops_props,classes,  crown, margin, bridge, splint,
                 implant, help, flexible_tooth, bracket_placement, denture_base, occlusion, ortho] 
 
 init_classes = [ODC_AddonPreferences, OPENDENTAL_OT_addon_prefs_odc]

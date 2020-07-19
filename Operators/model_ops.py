@@ -337,25 +337,24 @@ class OPENDENTAL_OT_fill(bpy.types.Operator):
 
     def execute(self, context):
 
-        if bpy.context.selected_objects == []:
-
-            message = " Please select Model !"
-            ShowMessageBox(message=message, icon="COLORSET_02_VEC")
-
-            return {"CANCELLED"}
-
-        else:
+        if context.active_object :
+            ob = context.active_object
+            if ob.mode == "EDIT" :
             
-            ####### Get model to clean ####### 
-            bpy.ops.object.mode_set(mode="OBJECT")
-            Model = bpy.context.view_layer.objects.active
-            bpy.ops.object.select_all(action="DESELECT")
-            Model.select_set(True)
-
-            bpy.ops.object.mode_set(mode="EDIT")
-            bpy.context.tool_settings.mesh_select_mode = (True, False, False)
-            bpy.ops.mesh.edge_face_add()
+                bpy.ops.mesh.edge_face_add()
+                bpy.ops.mesh.subdivide(number_cuts=10)
+                bpy.ops.mesh.subdivide(number_cuts=2)
+                bpy.ops.mesh.select_all(action="DESELECT")
+                bpy.ops.mesh.select_non_manifold()
+                bpy.ops.mesh.remove_doubles(threshold=0.1)
             
+                bpy.ops.mesh.looptools_relax(
+                    input="selected", interpolation="cubic", iterations="3", regular=True
+                )
+                bpy.ops.mesh.select_all(action="SELECT")
+                bpy.ops.mesh.fill_holes(sides=400)
+                bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
+                bpy.ops.mesh.select_all(action="DESELECT")
 
             return {"FINISHED"}
 
@@ -513,6 +512,8 @@ class OPENDENTAL_OT_clean_model(bpy.types.Operator):
             bpy.ops.object.mode_set(mode="EDIT")
             bpy.ops.mesh.select_all(action="DESELECT")
             bpy.ops.mesh.select_non_manifold()
+            bpy.ops.mesh.remove_doubles(threshold=0.1)
+
             bpy.ops.mesh.looptools_relax(
                 input="selected", interpolation="cubic", iterations="3", regular=True
             )
@@ -558,19 +559,8 @@ def add_curve():
     bpy.context.scene.tool_settings.transform_pivot_point = "INDIVIDUAL_ORIGINS"
     
     # Get Model :
-    bpy.ops.object.mode_set(mode="OBJECT")
-    Model = bpy.context.view_layer.objects.active
-    bpy.ops.object.select_all(action="DESELECT")
-    Model.select_set(True)
-
-    # Hide everything but model :
-    bpy.ops.object.hide_view_set(unselected=True)
-
-    # Deselect all vertices :
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="DESELECT")
-    bpy.ops.object.mode_set(mode="OBJECT")
-
+    cutting_target_name = bpy.context.scene.ODC_modops_props.cutting_target
+    Model = bpy.data.objects[cutting_target_name]
     # ....Add Curve ....... :
     bpy.ops.curve.primitive_bezier_curve_add(
         radius=1, enter_editmode=False, align="CURSOR"
@@ -582,7 +572,7 @@ def add_curve():
     cutting_tool.name = "Cutting_curve"
     curve = cutting_tool.data
     curve.name = "Cutting_curve"
-
+    bpy.context.scene.ODC_modops_props.cutting_tool_name = cutting_tool.name
     # Prepare curve and Set curve settings :
     bpy.ops.object.mode_set(mode="EDIT")
 
@@ -599,16 +589,17 @@ def add_curve():
     bpy.context.object.data.extrude = 0
     bpy.context.object.data.bevel_resolution = 10
     bpy.context.scene.tool_settings.curve_paint_settings.error_threshold = 1
-    bpy.context.scene.tool_settings.curve_paint_settings.corner_angle = 1.5708
+    bpy.context.scene.tool_settings.curve_paint_settings.corner_angle = 0.785398
+    #bpy.context.scene.tool_settings.curve_paint_settings.corner_angle = 1.5708
     bpy.context.scene.tool_settings.curve_paint_settings.depth_mode = "SURFACE"
-    bpy.context.scene.tool_settings.curve_paint_settings.surface_offset = 0
-    bpy.context.scene.tool_settings.curve_paint_settings.use_offset_absolute = True
+    bpy.context.scene.tool_settings.curve_paint_settings.surface_offset = -0.5
+    #bpy.context.scene.tool_settings.curve_paint_settings.use_offset_absolute = True
 
     # Add color material :
-    mat = bpy.data.materials.new("Blue_Metalica")
-    mat.diffuse_color = [0.0, 0.0, 1.0, 0.9]
-    mat.metallic = 0.7
-    mat.roughness = 0.1
+    mat = bpy.data.materials.new("ODC_Blue_Metalica")
+    mat.diffuse_color = [0.1, 0.4, 1.0, 1.0]
+    #mat.metallic = 0.7
+    mat.roughness = 0.3
 
     curve.materials.append(mat)
     bpy.ops.object.mode_set(mode="OBJECT")
@@ -650,21 +641,29 @@ def first_separate_method() :
     Model_name = bpy.context.scene.ODC_modops_props.cutting_target
     Model = bpy.data.objects[Model_name]
 
-    # Select intesecting vgroup + more :
+    bpy.ops.object.mode_set(mode="OBJECT")
+    bpy.ops.object.select_all(action="DESELECT")
+    Model.select_set(True)
+    bpy.context.view_layer.objects.active = Model
+
+    # Select intesecting vgroup :
     bpy.ops.object.mode_set(mode = 'EDIT')
+    bpy.context.tool_settings.mesh_select_mode = (True, False, False)
+
     bpy.ops.mesh.select_all(action="DESELECT")
     intersect_vgroup = Model.vertex_groups['intersect_vgroup']
     Model.vertex_groups.active_index = intersect_vgroup.index
     bpy.ops.object.vertex_group_select()
+    #bpy.ops.mesh.rip_move(TRANSFORM_OT_translate={"value":(0.01, 0.01, -0.01)})
     bpy.ops.mesh.edge_split()
-
+    
     # Separate by loose parts :
 
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.mesh.separate(type="LOOSE")
     bpy.ops.object.mode_set(mode="OBJECT")
-
+    
 #######################################################################################
 #2nd separate method function :
 
@@ -733,10 +732,9 @@ def filter_loose_parts() :
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.ops.object.select_all(action="SELECT")
     selected_parts = bpy.context.selected_objects
-    bpy.ops.object.select_all(action="DESELECT")
 
     for obj in selected_parts :
-
+        bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
         
@@ -760,7 +758,6 @@ def filter_loose_parts() :
         else :
             bpy.ops.object.delete(use_global=False, confirm=False)
 
-    
     bpy.ops.object.select_all(action="SELECT")
     resulting_parts = len(bpy.context.selected_objects)
 
@@ -813,22 +810,21 @@ class OPENDENTAL_OT_make_curve(bpy.types.Operator):
         elif event.type == "RET":
 
             if event.value == ("PRESS"):
-
-                cutting_tool = bpy.data.objects["Cutting_curve"]
-                bpy.ops.object.mode_set(mode="OBJECT")
-
-                bpy.ops.object.select_all(action="DESELECT")
+                cutting_tool_name = bpy.context.scene.ODC_modops_props.cutting_tool_name
+                cutting_tool = bpy.data.objects[cutting_tool_name]
                 cutting_tool.select_set(True)
                 bpy.context.view_layer.objects.active = cutting_tool
-                bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Shrinkwrap")
 
-                
                 bpy.ops.object.mode_set(mode="EDIT")
                 bpy.ops.curve.cyclic_toggle()
+
+                bpy.ops.object.mode_set(mode="OBJECT")
+
+                bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Shrinkwrap")
                 
                 bpy.context.object.data.bevel_depth = 0
-                bpy.context.object.data.extrude = 2
-                bpy.context.object.data.offset = -0.5
+                bpy.context.object.data.extrude = 2.5
+                bpy.context.object.data.offset = 0
 
                 bpy.ops.wm.tool_set_by_id(name="builtin.select")
                 
@@ -885,6 +881,21 @@ class OPENDENTAL_OT_make_curve(bpy.types.Operator):
                 Model = bpy.context.view_layer.objects.active
                 context.scene.ODC_modops_props.cutting_target = Model.name
                 
+                bpy.ops.object.mode_set(mode="OBJECT")
+                bpy.ops.object.hide_view_clear()
+                bpy.ops.object.select_all(action="DESELECT")
+
+                for obj in bpy.data.objects :
+                    if "Cutting_curve" in obj.name :
+                        obj.select_set(True)
+                        bpy.ops.object.delete(use_global=False, confirm=False)
+
+                bpy.ops.object.select_all(action="DESELECT")
+                Model.select_set(True)
+                bpy.context.view_layer.objects.active = Model
+                # Hide everything but model :
+                bpy.ops.object.hide_view_set(unselected=True)
+
                 add_curve()
 
                 context.window_manager.modal_handler_add(self)
@@ -910,7 +921,8 @@ class OPENDENTAL_OT_curve_cut(bpy.types.Operator):
             
         Model_name = context.scene.ODC_modops_props.cutting_target
         Model = bpy.data.objects[Model_name]
-        cutting_tool = bpy.data.objects["Cutting_curve"]
+        cutting_tool_name = bpy.context.scene.ODC_modops_props.cutting_tool_name
+        cutting_tool = bpy.data.objects[cutting_tool_name]
 
         bpy.context.tool_settings.mesh_select_mode = (True, False, False)
         bpy.context.scene.tool_settings.use_snap = False
@@ -924,21 +936,32 @@ class OPENDENTAL_OT_curve_cut(bpy.types.Operator):
         cutting_tool.select_set(True)
         bpy.context.view_layer.objects.active = cutting_tool
 
-        # Change bevel_depht to 0 to have flate curve :
+        # Change setting flatten curve  :
         bpy.context.object.data.bevel_depth = 0
+        bpy.context.object.data.extrude = 0
+        bpy.context.object.data.offset = 0
+
+        # subdivide curve points :
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.curve.select_all(action='SELECT')
+        bpy.ops.curve.subdivide()
+
+        # extrude curve :
+        bpy.context.object.data.bevel_depth = 0
+        bpy.context.object.data.extrude = 2.5
+        bpy.context.object.data.offset = 0
         
 
         # convert curve (cutting_tool )to mesh :
 
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.convert(target="MESH")
+
         
         # Make vertex group :
         
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
-
-        #bpy.ops.mesh.subdivide(number_cuts=1)
         
         curve_vgroup = cutting_tool.vertex_groups.new(name="curve_vgroup")
         bpy.ops.object.vertex_group_assign()
@@ -974,12 +997,14 @@ class OPENDENTAL_OT_curve_cut(bpy.types.Operator):
         intersect_vgroup = Model.vertex_groups.new(name="intersect_vgroup")
         bpy.ops.object.vertex_group_assign()
 
+        bpy.ops.object.mode_set(mode="OBJECT")
         Model.select_set(False)
 
         if bpy.context.selected_objects :
             bpy.ops.object.hide_view_set(unselected=False)
             
         Model.select_set(True)
+        bpy.context.view_layer.objects.active = Model
         
         # delete curve_vgroup :
         bpy.ops.object.mode_set(mode = 'EDIT')
@@ -998,6 +1023,8 @@ class OPENDENTAL_OT_curve_cut(bpy.types.Operator):
         # Filtring loose parts :
         resulting_parts = filter_loose_parts()
 
+        print(resulting_parts)
+        
         if resulting_parts > 1 :
 
             print("Cutting done with first method")
@@ -1022,12 +1049,19 @@ class OPENDENTAL_OT_curve_cut(bpy.types.Operator):
         
         # Remove Blue material :
 
-        for obj in bpy.context.selected_objects:
-            bpy.context.view_layer.objects.active = obj
-            if 'Blue_Metalica' in obj.active_material.name :
-                bpy.ops.object.material_slot_remove()
+        for ob in bpy.context.visible_objects :
+            if ob.material_slots :
+                for mat_slot in ob.material_slots :
+                    if 'ODC_Blue_Metalica' in mat_slot.material.name :
+                        bpy.ops.object.select_all(action="DESELECT")
+                        ob.select_set(True)
+                        bpy.context.view_layer.objects.active = ob
+                        bpy.ops.object.material_slot_remove()
 
         bpy.ops.object.select_all(action="DESELECT")
+        ob = bpy.context.visible_objects[-1]
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
         bpy.ops.wm.tool_set_by_id(name="builtin.select")
             
         return {"FINISHED"}
@@ -1549,7 +1583,7 @@ class OPENDENTAL_OT_hollow_model(bpy.types.Operator):
             verts = Model.data.vertices 
             selected_verts =  [v for v in verts if v.select]
 
-            if selected_verts :
+            if len(selected_verts) == 100000 :
 
                 message = " Invalid mesh! Can't hollow Open mesh!"
                 ShowMessageBox(message=message, icon="COLORSET_01_VEC")
@@ -1570,13 +1604,13 @@ class OPENDENTAL_OT_hollow_model(bpy.types.Operator):
                 bpy.ops.object.mode_set(mode="OBJECT")
                 bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
 
-
+                
                 ####### Duplicate Model #######
                         
                 # Get active Object :
 
                 Model = bpy.context.view_layer.objects.active
-
+                
                 # Duplicate Model to Model_hollow:
 
                 bpy.ops.object.select_all(action="DESELECT")
@@ -1655,7 +1689,7 @@ class OPENDENTAL_OT_hollow_model(bpy.types.Operator):
                 Mball_object.name = "Mball_object"
                 mball_mesh = Mball_object.data
                 mball_mesh.name = "Mball_object_mesh"
-
+                
                 # Make boolean intersect operation :
 
                 bpy.ops.object.select_all(action="DESELECT")
@@ -1721,11 +1755,11 @@ class OPENDENTAL_OT_solid_hollow_models(bpy.types.Operator):
             
             bpy.ops.opendental.model_base()
             bpy.context.object.show_name = True
-            Model_solid_base = bpy.context.active_object
+            Model_solid_base = bpy.context.view_layer.objects.active
 
             bpy.ops.opendental.hollow_model()
             bpy.context.object.show_name = True
-            Model_hollow = bpy.context.active_object
+            Model_hollow = bpy.context.view_layer.objects.active
 
             # flip/Unflip matrix :
             view_rotation = context.space_data.region_3d.view_rotation
@@ -1957,30 +1991,314 @@ class OPENDENTAL_OT_add_offset(bpy.types.Operator):
 
         return {"FINISHED"}
 
+#######################################################################################
+        
+class ODC2_OT_add_3d_text(bpy.types.Operator):
+    """add 3D text """
+    bl_label = "Add 3D Text"
+    bl_idname = "odc2.add_3d_text"
+    
+    def execute(self, context):
+
+        #import corbel font (windows):
+        try :
+            if not 'Calibri' in bpy.data.fonts :
+
+                bpy.ops.font.open(filepath="C:\\WINDOWS\\Fonts\\calibri.ttf", relative_path=True)
+                bpy.ops.font.open(filepath="C:\\WINDOWS\\Fonts\\calibrib.ttf", relative_path=True)
+                bpy.ops.font.open(filepath="C:\\WINDOWS\\Fonts\\calibrii.ttf", relative_path=True)
+                bpy.ops.font.open(filepath="C:\\WINDOWS\\Fonts\\calibriz.ttf", relative_path=True)
+        except Exception :
+            pass
+
+
+        text_color = [0.0, 0.0, 1.0, 1.0]
+        props = bpy.context.scene.ODC_modops_props                                    
+        
+        font_size = 4
+
+        if bpy.context.selected_objects == []:
+
+            message = " Please select the Model to separate!"
+            ShowMessageBox(message=message, icon="COLORSET_02_VEC")
+
+            return {"CANCELLED"}
+
+        else:
+            
+            if context.object.type == 'FONT':
+
+                text_ob = context.object
+
+                #Assign text_body_prop string to selected FONT object body :    
+                text_ob.data.body = props.text_body_prop
+       
+            else:
+                
+                props.target_model_name = context.object.name
+                target = context.object
+
+                bpy.ops.object.mode_set(mode="OBJECT")
+                bpy.ops.object.text_add(enter_editmode=False, align='CURSOR')
+                bpy.ops.object.move_to_collection(collection_index=1)
+
+                text_ob = context.active_object
+                text_ob.data.body = props.text_body_prop
+                text_ob.name = text_ob.data.body
+                text_ob.data.name = text_ob.data.body 
+
+                #import Calibri font :
+                text_ob.data.font = bpy.data.fonts['Calibri']
+                text_ob.data.font_bold = bpy.data.fonts['Calibri-Bold']
+                text_ob.data.font_italic =  bpy.data.fonts['Calibri-Italic']
+                text_ob.data.font_bold_italic = bpy.data.fonts['Calibri-BoldItalic']
+
+                bpy.ops.object.mode_set(mode="EDIT")
+                bpy.ops.font.select_all()
+                
+                # Check font options and apply them if toggled :
+                dict_font_options = { 
+
+                                    'BOLD' : props.bold_toggle_prop,
+                                    'ITALIC' : props.italic_toggle_prop,
+                                    'UNDERLINE' : props.underline_toggle_prop,
+
+                                    }
+                for key, value in dict_font_options.items() :
+                    if value == True :
+                        bpy.ops.font.style_toggle(style=key)
+                
+                bpy.ops.object.mode_set(mode="OBJECT")
+
+                #Align text :
+                text_ob.data.align_x = 'CENTER'
+                text_ob.data.align_y = 'CENTER'
+                text_ob.data.size = font_size
+                bpy.ops.view3d.view_axis(type='TOP', align_active=True)
+                
+                #change curve settings:
+                text_ob.data.extrude = 0.5
+                text_ob.data.bevel_depth = 0.02
+                text_ob.data.bevel_resolution = 6
+
+                #add SHRINKWRAP modifier :
+                modS = text_ob.modifiers.new('SHRINKWRAP', 'SHRINKWRAP')
+                modS.use_apply_on_spline = True
+                modS.wrap_method = 'PROJECT'
+                modS.offset = 0
+                modS.wrap_mode = 'ABOVE_SURFACE'
+                modS.cull_face = 'OFF'
+                modS.use_negative_direction = True
+                modS.use_positive_direction = True
+                modS.use_project_z = True
+                modS.target = target
+
+                #todo : add color mat 
+                # Add color material :
+                if "ODC_text_mat" in bpy.data.materials :
+                    mat = bpy.data.materials["ODC_text_mat"]
+                else :
+                    mat = bpy.data.materials.new("ODC_text_mat")
+                    mat.diffuse_color = text_color
+                    mat.roughness = 0.6
+                    
+
+                text_ob.data.materials.append(mat)
+                bpy.context.scene.tool_settings.use_snap = False
+
+                #store text_ob_name :
+                props.text_ob_name = text_ob.name
+   
+            return {'FINISHED'}
+    
+class ODC2_OT_embosse_3d_text(bpy.types.Operator):
+    """embosse 3D text """
+    bl_label = "Embosse 3D Text"
+    bl_idname = "odc2.embosse_3d_text"
+    
+    def execute(self, context):
+
+        props = bpy.context.scene.ODC_modops_props
+        target_model = bpy.data.objects[props.target_model_name]
+
+        for obj in bpy.context.selected_objects :
+            if obj.type != 'FONT':
+
+                message = " Please select Text Object(s)!"
+                ShowMessageBox(message=message, icon="COLORSET_02_VEC")
+
+                return {"CANCELLED"}
+
+        else:
+
+            start = time.perf_counter()
+
+            for obj in bpy.context.selected_objects :
+
+                target_model = bpy.data.objects[props.target_model_name]
+                text_ob = obj
+
+                bpy.ops.object.mode_set(mode="OBJECT")
+                bpy.ops.object.select_all(action="DESELECT")
+                text_ob.select_set(True)
+                bpy.context.view_layer.objects.active = text_ob
+
+                #Convert to mesh, Remesh 0.01 :
+                bpy.ops.object.convert(target='MESH')
+                bpy.context.object.data.remesh_voxel_size = 0.01
+                bpy.context.object.data.use_remesh_smooth_normals = True
+                bpy.ops.object.voxel_remesh()
+
+                t1 = time.perf_counter()
+                print(f'remesh text time = {t1-start}')
+
+                #Boolean difference :
+                bpy.ops.object.select_all(action="DESELECT")
+                target_model.select_set(True)
+                bpy.context.view_layer.objects.active = target_model
+
+                bpy.ops.object.modifier_add(type='BOOLEAN')
+                bpy.context.object.modifiers["Boolean"].operation = 'UNION'
+                bpy.context.object.modifiers["Boolean"].object = text_ob
+                bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Boolean")
+
+                t2 = time.perf_counter()
+                print(f'boolean union time = {t2-t1}')
+
+                #Delete text_ob :
+                bpy.ops.object.select_all(action="DESELECT")
+                text_ob.select_set(True)
+                bpy.context.view_layer.objects.active = text_ob
+                bpy.ops.object.delete(use_global=False, confirm=False)
+
+                bpy.ops.object.select_all(action="DESELECT")
+                target_model.select_set(True)
+                bpy.context.view_layer.objects.active = target_model
+
+            bpy.ops.object.select_all(action="DESELECT")
+            target_model.select_set(True)
+            bpy.context.view_layer.objects.active = target_model
+            props.text_body_prop = 'Input Text'
+
+            finish = time.perf_counter()
+            print(f'total time = {finish-start}')
+
+            return {'FINISHED'}   
+
+
+
+
+
+
+class ODC2_OT_engrave_3d_text(bpy.types.Operator):
+    """engrave 3D text """
+    bl_label = "Engrave 3D Text"
+    bl_idname = "odc2.engrave_3d_text"
+    
+    def execute(self, context):
+
+        props = bpy.context.scene.ODC_modops_props
+        target_model = bpy.data.objects[props.target_model_name]
+
+        for obj in bpy.context.selected_objects :
+            if obj.type != 'FONT':
+
+                message = " Please select Text Object(s)!"
+                ShowMessageBox(message=message, icon="COLORSET_02_VEC")
+
+                return {"CANCELLED"}
+
+        else:
+            start = time.perf_counter()
+
+            bpy.ops.object.mode_set(mode="OBJECT")
+
+            for obj in bpy.context.selected_objects :
+
+                target_model = bpy.data.objects[props.target_model_name]
+                text_ob = obj
+
+                bpy.ops.object.select_all(action="DESELECT")
+                text_ob.select_set(True)
+                bpy.context.view_layer.objects.active = text_ob
+
+                #Convert to mesh, Remesh 0.01 :
+                bpy.ops.object.convert(target='MESH')
+                bpy.context.object.data.remesh_voxel_size = 0.01
+                bpy.context.object.data.use_remesh_smooth_normals = True
+                bpy.ops.object.voxel_remesh()
+
+                t1 = time.perf_counter()
+                print(f'remesh text time = {t1-start}')
+
+                #Boolean UNION :
+                bpy.ops.object.select_all(action="DESELECT")
+                target_model.select_set(True)
+                bpy.context.view_layer.objects.active = target_model
+
+                bpy.ops.object.modifier_add(type='BOOLEAN')
+                bpy.context.object.modifiers["Boolean"].object = text_ob
+                bpy.ops.object.modifier_apply(apply_as='DATA', modifier="Boolean")
+
+                t2 = time.perf_counter()
+                print(f'boolean difference time = {t2-t1}') 
+
+                #Delete text_ob :
+                bpy.ops.object.select_all(action="DESELECT")
+                text_ob.select_set(True)
+                bpy.context.view_layer.objects.active = text_ob
+                bpy.ops.object.delete(use_global=False, confirm=False)
+
+            bpy.ops.object.select_all(action="DESELECT")
+            target_model.select_set(True)
+            bpy.context.view_layer.objects.active = target_model
+            props.text_body_prop = 'Input Text'
+
+            finish = time.perf_counter()
+            print(f'total time = {finish-start}')
+
+            return {'FINISHED'} 
+
+
+
+
+
+
 classes = [ OPENDENTAL_OT_join_models,
             OPENDENTAL_OT_separate_models,
             OPENDENTAL_OT_parent_models,
             OPENDENTAL_OT_unparent_models,
+
             OPENDENTAL_OT_align_to_front,
             OPENDENTAL_OT_center_Model,
             OPENDENTAL_OT_center_cursor,
+
             OPENDENTAL_OT_decimate_model, 
             OPENDENTAL_OT_clean_model,
             OPENDENTAL_OT_fill, 
             OPENDENTAL_OT_retopo_smooth,
+
             OPENDENTAL_OT_make_curve,
             OPENDENTAL_OT_curve_cut,
             OPENDENTAL_OT_trim_model,
             OPENDENTAL_OT_square_cut,
             OPENDENTAL_OT_square_cut_confirm,
             OPENDENTAL_OT_square_cut_exit,
+
             OPENDENTAL_OT_model_base, 
             OPENDENTAL_OT_hollow_model,
             OPENDENTAL_OT_solid_hollow_models, 
             OPENDENTAL_OT_remesh_model,
+
             OPENDENTAL_OT_model_color, 
             OPENDENTAL_OT_model_remove_color,
-            OPENDENTAL_OT_add_offset,            
+
+            OPENDENTAL_OT_add_offset,
+            
+            ODC2_OT_add_3d_text,
+            ODC2_OT_embosse_3d_text,
+            ODC2_OT_engrave_3d_text,
+
 ] 
     
 def register():
