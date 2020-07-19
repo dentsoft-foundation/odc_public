@@ -350,8 +350,45 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         row = layout.row()
         row.prop(modops_props, "offset", text="")
         row.operator("opendental.add_offset", text="Offset")
+        
+        #Make splint2 :
+        layout.row().separator()
 
+        row = layout.row()
+        row.label(text="Splint 2 beta", icon=yellow_point)
 
+        row = layout.row()
+        props = context.scene.ODC_modops_props
+        row.prop_search(context.scene.ODC_modops_props, "bool_model_prop", context.scene, "objects", text="Splint Model")
+
+        row = layout.row()
+        row.prop(props, "splint_thikness_prop", text="Splint thikness")
+
+        row = layout.row()
+        row.operator("odc2.splint_cutter", text="Outline Curve")
+        row.operator("odc2.make_splint2", text="Splint2")
+
+        #Add 3d text :
+        row = layout.row()
+        row.label(text="3D Text", icon=yellow_point)
+
+        row = layout.row()
+        row.prop(props, "text_body_prop", text="")
+
+        if bpy.context.object:
+            ob = bpy.context.object
+            if ob.type == 'FONT' :
+                row.prop(ob.data, "size", text= "size" )
+
+        row.prop(props, "bold_toggle_prop", icon_only=True, icon='BOLD')
+        row.prop(props, "italic_toggle_prop", icon_only=True, icon='ITALIC')
+        row.prop(props, "underline_toggle_prop", icon_only=True, icon='UNDERLINE')
+
+        row = layout.row()
+        row.operator("odc2.add_3d_text", text="Add 3D Text")
+        row.operator("odc2.embosse_3d_text", text="Embosse 3D text")
+        row.operator("odc2.engrave_3d_text", text="Engrave 3D text")
+        
 class OPENDENTAL_PT_ODCTeeth(bpy.types.Panel):
     """ Teeth Panel """
 
@@ -700,7 +737,7 @@ class OPENDENTAL_PT_ODCSplints(bpy.types.Panel):
         # Make Button
         row = layout.row()
         row.operator("opendental.splint_make", text="Finalize Splint")
-
+        
 
 class OPENDENTAL_PT_ODCOrtho(bpy.types.Panel):
     """ Ortho Panel """
