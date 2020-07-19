@@ -350,15 +350,16 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         row = layout.row()
         row.prop(modops_props, "offset", text="")
         row.operator("opendental.add_offset", text="Offset")
-        
+        props = context.scene.ODC_modops_props
+        #BETA, requires further dev. WIP by Dr. Issam Dakir - devops not for public use
         #Make splint2 :
         layout.row().separator()
-
+        '''
         row = layout.row()
         row.label(text="Splint 2 beta", icon=yellow_point)
 
         row = layout.row()
-        props = context.scene.ODC_modops_props
+        
         row.prop_search(context.scene.ODC_modops_props, "bool_model_prop", context.scene, "objects", text="Splint Model")
 
         row = layout.row()
@@ -367,7 +368,7 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         row = layout.row()
         row.operator("odc2.splint_cutter", text="Outline Curve")
         row.operator("odc2.make_splint2", text="Splint2")
-
+        '''
         #Add 3d text :
         row = layout.row()
         row.label(text="3D Text", icon=yellow_point)
