@@ -1392,63 +1392,65 @@ class OPENDENTAL_OT_model_base(bpy.types.Operator):
             return {"CANCELLED"}
 
         else:
-            
+
+            extrude_value = (0, 0, -base_height)
+
+            # Get area and space "VIEW_3D" :...........................
+
+            for area in bpy.context.screen.areas:
+                if area.type == "VIEW_3D":
+                    my_area = area
+
+            for space in my_area.spaces:
+                if space.type == "VIEW_3D":
+                    my_space = space
+
+            # [DEBUG] Context override: Need it Only if we run this script in text editor
+            #context = bpy.context.copy()
+            #context["area"] = my_area
+            #context["space_data"] = my_space
+
             # Prepare scene settings :
 
             bpy.ops.view3d.snap_cursor_to_center()
             bpy.ops.transform.select_orientation(orientation="GLOBAL")
             bpy.context.scene.tool_settings.transform_pivot_point = "INDIVIDUAL_ORIGINS"
-            bpy.context.tool_settings.mesh_select_mode = (True, False, False)
             bpy.context.scene.tool_settings.use_snap = False
             bpy.context.scene.tool_settings.use_proportional_edit_objects = False
             bpy.ops.object.mode_set(mode="OBJECT")
-            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
 
-            ####### Duplicate Model #######
-                        
             # Get active Object :
 
             Model = bpy.context.view_layer.objects.active
 
-            # Duplicate Model to Model_Base :
+            # Duplicate Model :
 
             bpy.ops.object.select_all(action="DESELECT")
             Model.select_set(True)
             bpy.context.view_layer.objects.active = Model
             bpy.ops.object.duplicate_move()
 
-            # Rename Model_Base :
+            # ....Rename Model_base....
 
             Model_base = bpy.context.view_layer.objects.active
             Model_base.name = f"{Model.name}_solid_base"
             mesh_base = Model_base.data
             mesh_base.name = f"{Model.name}_solid_base_mesh"
 
+            # Get Model_base :
+
+            Model = Model_base
+
             bpy.ops.object.select_all(action="DESELECT")
-            Model_base.select_set(True)
-            bpy.context.view_layer.objects.active = Model_base
+            Model.select_set(True)
+            bpy.context.view_layer.objects.active = Model
+            bpy.ops.object.origin_set(type="ORIGIN_GEOMETRY", center="MEDIAN")
 
-            
-            ####### Flip Model_Base to top view #######
-
-            view_rotation = context.space_data.region_3d.view_rotation
-            view3d_rot_matrix = view_rotation.to_matrix().to_4x4()
-
-            flip_matrix = view3d_rot_matrix.inverted()
-            unflip_matrix = view3d_rot_matrix
-
-            Model_base.matrix_world = flip_matrix @ Model_base.matrix_world
-            
-            # Select base boarder :
-                        
+            # Select border :
             bpy.ops.object.mode_set(mode="EDIT")
             bpy.ops.mesh.select_all(action="DESELECT")
+            bpy.context.tool_settings.mesh_select_mode = (True, False, False)
             bpy.ops.mesh.select_non_manifold()
-
-            # Relax border loop :
-            bpy.ops.mesh.remove_doubles(threshold=0.1)
-            bpy.ops.mesh.looptools_relax(input="selected", interpolation="cubic",
-            iterations="3", regular=True)
 
             # Make some calcul of average z_cordinate of border vertices :
 
@@ -1466,88 +1468,54 @@ class OPENDENTAL_OT_model_base(bpy.types.Operator):
             print (f"min_z = {min_z}")
             print (f"offset = {offset}")
 
-            # Border_2 = Extrude 1st border loop no translation :
-            bpy.ops.object.mode_set(mode="EDIT")
-            bpy.ops.mesh.extrude_region_move()
-
-            # change Border2 vertices zco to min_z - base_height  :
-
-            bpy.ops.object.mode_set(mode="OBJECT") 
-            selected_verts = [v for v in verts if v.select == True ]
-
-            for v in selected_verts :
-                global_v_co = obj_mx @ v.co 
-                v.co = obj_mx.inverted() @ Vector((global_v_co[0], global_v_co[1], min_z - base_height))
-            #Store Base location :
             context.scene.ODC_modops_props.base_location_prop = (0,0,min_z - base_height)
-            # fill base :
-            bpy.ops.object.mode_set(mode="EDIT")
-            bpy.ops.mesh.fill(use_beauty=False)
 
-            # Repare geometry resuting from precedent operation :
+            ###......... Get View values : ............###
+            bpy.ops.object.mode_set(mode="EDIT")
+
+            view3d = my_space.region_3d
+            view_matrix = view3d.view_matrix
+
+            view_matrix_3 = view_matrix.to_3x3()
+
+            ###............. Project Base Operation...............###
+
+            # Extrude selected vertices :
+
+            bpy.ops.mesh.extrude_region_move()
+            bpy.ops.transform.translate(
+                value=extrude_value,
+                orient_type="VIEW",
+                orient_matrix_type="VIEW",
+                constraint_axis=(False, False, True),
+            )
+
+            # Scale border vertices to zero :
+
+            bpy.ops.transform.resize(
+                value=(1, 1, 0),
+                orient_type="VIEW",
+                orient_matrix=view_matrix_3.transposed(),
+                orient_matrix_type="VIEW",
+                constraint_axis=(False, False, True),
+            )
+
+            # and fill base :
+
+            bpy.ops.mesh.fill()
+
+            # Remove extra edges from Base face :
 
             bpy.ops.mesh.dissolve_limited()
 
-            bpy.ops.mesh.select_all(action="SELECT")
-            bpy.ops.mesh.fill_holes(sides=100)
+            # Repare geometry resuting from precedent operation :
 
             bpy.ops.mesh.select_all(action="SELECT")
             bpy.ops.mesh.normals_make_consistent(inside=False)
             bpy.ops.mesh.select_all(action="DESELECT")
-            bpy.ops.object.mode_set(mode="OBJECT")
-
-            # Hide everything but Model_base :
-
-            bpy.ops.object.mode_set(mode="OBJECT")
-            bpy.ops.object.shade_flat()
-            bpy.ops.object.hide_view_set(unselected=True)
-
-            # Model_base matrix_world reset :
-
-            Model_base.matrix_world = unflip_matrix @ Model_base.matrix_world
-
-           
-            # Result Check :
-
-            bpy.ops.object.mode_set(mode="EDIT")
-            bpy.ops.mesh.select_all(action="DESELECT")
             bpy.ops.mesh.select_non_manifold()
-
+            bpy.ops.mesh.delete(type="FACE")
             bpy.ops.object.mode_set(mode="OBJECT")
-            verts = Model_base.data.vertices 
-            selected_verts =  [v for v in verts if v.select] 
-            
-            if not selected_verts :
-
-                bpy.context.object.show_name = True
-
-                if show_box == True :
-                    message = " Model Base created !"
-                    ShowMessageBox(message=message, icon="COLORSET_03_VEC")
-
-                print ("base operation done in 1st check")
-                return {"FINISHED"}
-
-            else :
-
-                bpy.ops.object.mode_set(mode="OBJECT")
-
-                bpy.ops.object.select_all(action="DESELECT")
-                Model_base.select_set(True)
-                bpy.context.view_layer.objects.active = Model_base
-
-                bpy.ops.object.delete(use_global=False, confirm=False)
-
-                bpy.ops.object.hide_view_clear()
-                bpy.ops.object.select_all(action="DESELECT")
-                Model.select_set(True)
-                bpy.context.view_layer.objects.active = Model
-
-                bpy.ops.object.hide_view_set(unselected=True)
-
-                if show_box == True :
-                    message = " Operation failed ! Please change view orientation and retry (clean trimed Model)!"
-                    ShowMessageBox(message=message, icon="COLORSET_01_VEC")
 
             return {"FINISHED"}
 
