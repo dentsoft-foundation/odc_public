@@ -887,7 +887,7 @@ class OPENDENTAL_PT_ODCDentures(bpy.types.Panel):
 
 def register():
     
-    #bpy.utils.register_class(SCENE_UL_odc_teeth)
+    bpy.utils.register_class(SCENE_UL_odc_teeth)
     bpy.utils.register_class(SCENE_UL_odc_implants)
     bpy.utils.register_class(SCENE_UL_odc_bridges)
     bpy.utils.register_class(SCENE_UL_odc_splints)

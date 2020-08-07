@@ -322,7 +322,7 @@ class OPENDENTAL_OT_insertion_axis(bpy.types.Operator):
             ob = bpy.data.objects.new(tooth.name + "_Axis", None)
             ob.empty_draw_type = 'SINGLE_ARROW'
             ob.empty_draw_size = 10
-            context.scene.objects.link(ob)
+            context.collection.objects.link(ob)
             tooth.axis = ob.name
             master = context.scene.odc_props.master
             if master and master in bpy.data.objects:
@@ -572,7 +572,7 @@ class CBGetCrownForm(bpy.types.Operator):
             if tooth.restoration and tooth.restoration in bpy.data.objects:
                 old_ob = bpy.data.objects[tooth.restoration]
                 old_ob.name = 'To Delete'
-                context.scene.objects.unlink(old_ob)
+                context.collection.objects.unlink(old_ob)
                 old_ob.user_clear()
                 bpy.data.objects.remove(old_ob)
         
@@ -582,8 +582,9 @@ class CBGetCrownForm(bpy.types.Operator):
         odcutils.obj_from_lib(settings.tooth_lib,self.ob_list)
         
         ob = bpy.data.objects[self.ob_list]
-        sce.objects.link(ob)
-        ob.location = sce.cursor_location
+        context.collection.objects.link(ob)
+        
+        ob.location = sce.cursor.location
         
         
         if tooth != None:
@@ -650,7 +651,7 @@ class CBGetCrownForm(bpy.types.Operator):
         #fill the bottom if it's a pontic
         
         #layer management
-        odcutils.layer_management(sce.odc_teeth)
+        #odcutils.layer_management(sce.odc_teeth)
         #odcutils.transform_management(tooth,sce)
         
         return {'FINISHED'}

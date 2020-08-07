@@ -16,12 +16,12 @@ import bmesh
 from mathutils.bvhtree import BVHTree
 
 #Addon imports :
-import Addon_utils.odcutils
-import Operators.bgl_utils
+import Addon_utils.odcutils as odcutils
+import Operators.bgl_utils as bgl_utils
 from Operators.curve import CurveDataManager
 from Operators.textbox import TextBox
 from Operators.mesh_cut import cross_section_seed_ver1, bound_box
-import Operators.common_drawing
+import Operators.common_drawing as common_drawing
 from Addon_utils.common_utilities import bversion
 
 #import odc.odcmenus.menu_utils as menu_utils
