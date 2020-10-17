@@ -40,15 +40,22 @@ bl_info = {
 # http://stackoverflow.com/questions/918154/relative-paths-in-python
 
 #############################################################################################
-#Python imports :
+# Python imports :
 import bpy, sys, os, platform, inspect, imp
 
-#Blender imports :
+# Blender imports :
 from bpy.types import Operator, AddonPreferences
-from bpy.props import (StringProperty, IntProperty, BoolProperty, EnumProperty, FloatProperty)
+from bpy.props import (
+    StringProperty,
+    IntProperty,
+    BoolProperty,
+    EnumProperty,
+    FloatProperty,
+    FloatVectorProperty,
+)
 from bpy.app.handlers import persistent
 
-#Add Addon path to sys.path :
+# Add Addon path to sys.path :
 addon_path = os.path.dirname(os.path.abspath(__file__))
 if not addon_path in sys.path:
     sys.path.append(addon_path)
@@ -56,15 +63,32 @@ if not addon_path in sys.path:
 
 #############################################################################################
 
-#Addon modules imports :
-from . Addon_utils import odcutils
-from . Operators import (classes,  crown, margin, bridge, splint,
-                         implant, help, flexible_tooth, bracket_placement, denture_base,
-                         occlusion, ortho, modops_props, model_ops,splint_2, blockout_undercuts) # , odcmenus, bgl_utils
-from . Panels import panel
+# Addon modules imports :
+from .Addon_utils import odcutils
+from .Operators import (
+    classes,
+    crown,
+    margin,
+    bridge,
+    splint,
+    implant,
+    help,
+    flexible_tooth,
+    bracket_placement,
+    denture_base,
+    occlusion,
+    ortho,
+    modops_props,
+    model_ops,
+    splint_2,
+    blockout_undercuts,
+)  # , odcmenus, bgl_utils
+from .Operators.cut_mesh_b28x.op_polytrim import polytrim
+from .Panels import panel
 
 
-#Update_brackets function :
+# Update_brackets function :
+
 
 def update_brackets(self, context):
     settings = odcutils.get_settings()
@@ -78,7 +102,7 @@ class ODC_AddonPreferences(AddonPreferences):
     bl_idname = __name__
 
     addons = bpy.context.preferences.addons
-   
+
     data_folder = os.path.join(addon_path, "Resources\\data\\")
 
     # addons_folder = bpy.utils.script_paths('addons')[0]
@@ -101,48 +125,56 @@ class ODC_AddonPreferences(AddonPreferences):
         workflow_enum.append((str(index), workflow_modes[index], str(index)))
 
     # real properties
-    tooth_lib : StringProperty(
+    tooth_lib: StringProperty(
         name="Tooth Library",
         default=def_tooth_lib,
         # default = '',
         subtype="FILE_PATH",
     )
 
-    mat_lib : StringProperty(
+    mat_lib: StringProperty(
         name="Material Library",
         default=def_mat_lib,
         # default = '',
         subtype="FILE_PATH",
     )
 
-    imp_lib : StringProperty(
+    imp_lib: StringProperty(
         name="Implant Library",
         default=def_imp_lib,
         # default = '',
         subtype="FILE_PATH",
     )
 
-    drill_lib : StringProperty(
+    drill_lib: StringProperty(
         name="Drill Library",
         default=def_drill_lib,
         # default = '',
         subtype="FILE_PATH",
     )
 
-    ortho_lib : StringProperty(
+    ortho_lib: StringProperty(
         name="Bracket Library",
         default=def_ortho_lib,
         # default = '',
         subtype="FILE_PATH",
     )
 
-    debug : IntProperty(name="Debug Level", default=1, min=0, max=4,)
-
-    behavior : EnumProperty(
-        name="Behavior Mode", description="", items=behavior_enum, default="2",
+    debug: IntProperty(
+        name="Debug Level",
+        default=1,
+        min=0,
+        max=4,
     )
 
-    workflow : EnumProperty(
+    behavior: EnumProperty(
+        name="Behavior Mode",
+        description="",
+        items=behavior_enum,
+        default="2",
+    )
+
+    workflow: EnumProperty(
         items=workflow_enum,
         name="Workflow Mode",
         description="SINGLE: for single units, LINEAR: do each tooth start to finish, MULTI_PARALLELS: Do all teeth at each step",
@@ -150,13 +182,13 @@ class ODC_AddonPreferences(AddonPreferences):
     )
 
     # Ortho Settings
-    bgauge_override : BoolProperty(
+    bgauge_override: BoolProperty(
         name="Override Edge Height",
         default=False,
         description="Use manual gauge height instead of default bracket prescription",
     )
 
-    bracket_gauge : FloatProperty(
+    bracket_gauge: FloatProperty(
         name="Gauge Height",
         default=4,
         min=0.5,
@@ -165,9 +197,128 @@ class ODC_AddonPreferences(AddonPreferences):
         description="Manual gauge height to override the default library prescription",
     )
 
-    bracket : EnumProperty(items=update_brackets, name="Choose Bracket")
+    bracket: EnumProperty(items=update_brackets, name="Choose Bracket")
 
     # behavior_mode = EnumProperty(name="How Active Tooth is determined by operator", description="'LIST' is more predictable, 'ACTIVE' more like blender, 'ACTIVE_SELECTED' is for advanced users", items=behavior_enum, default='0')
+
+    ########################################################################################################
+    ########################################################################################################
+    # Polytrim Propeties :
+
+    # Segmentation Editor Behavior :
+    spline_preview_tess: IntProperty(
+        name="Spline Teseslation", default=20, min=3, max=100
+    )
+    sketch_fit_epsilon: FloatProperty(
+        name="Sketch Epsilon", default=0.25, min=0.001, max=10
+    )
+    patch_boundary_fit_epsilon: FloatProperty(
+        name="Boundary Epsilon", default=0.35, min=0.001, max=10
+    )
+    spline_tessellation_epsilon: FloatProperty(
+        name="Spline Epsilon", default=0.1, min=0.001, max=10
+    )
+
+    destructive: EnumProperty(
+        name="Geometry Mode",
+        items=[
+            ("DESTRUCTIVE", "DESTRUCTIVE", "DESTRUCTIVE"),
+            ("NON_DESTRUCTIVE", "NON_DESTRUCTIVE", "NON_DESTRUCTIVE"),
+        ],
+        default="DESTRUCTIVE",
+    )
+    # 2D Interaction Behavior :
+    non_man_snap_pxl_rad: IntProperty(
+        name="Snap Radius Pixel", default=20, min=5, max=150
+    )
+    sel_pxl_rad: IntProperty(name="Select Radius Pixel", default=10, min=3, max=100)
+    loop_close_pxl_rad = IntProperty(
+        name="Select Radius Pixel", default=10, min=3, max=100
+    )
+
+    # Menu Colors :
+    menu_bg_color: FloatVectorProperty(
+        name="Mennu Backgrounng Color",
+        description="FLoating Menu color",
+        min=0,
+        max=1,
+        default=(0.3, 0.3, 0.3),
+        subtype="COLOR",
+    )
+    menu_border_color: FloatVectorProperty(
+        name="Menu Border Color",
+        description="FLoating menu border colro",
+        min=0,
+        max=1,
+        default=(0.1, 0.1, 0.1),
+        subtype="COLOR",
+    )
+    deact_button_color: FloatVectorProperty(
+        name="Button Color",
+        description="Deactivated button color",
+        min=0,
+        max=1,
+        default=(0.5, 0.5, 0.5),
+        subtype="COLOR",
+    )
+    act_button_color: FloatVectorProperty(
+        name="Active Button Color",
+        description="Activated button color",
+        min=0,
+        max=1,
+        default=(0.2, 0.2, 1),
+        subtype="COLOR",
+    )
+
+    # Geometry Colors :
+    act_point_color: FloatVectorProperty(
+        name="Active Point Color",
+        description="Selected/Active point color",
+        min=0,
+        max=1,
+        default=(0.2, 0.7, 0.2),
+        subtype="COLOR",
+    )
+    act_patch_color: FloatVectorProperty(
+        name="Active Patch Color",
+        description="Selected/Active patch color",
+        min=0,
+        max=1,
+        default=(0.2, 0.7, 0.2),
+        subtype="COLOR",
+    )
+    spline_default_color: FloatVectorProperty(
+        name="Spline Color",
+        description="Spline color",
+        min=0,
+        max=1,
+        default=(0.2, 0.2, 0.7),
+        subtype="COLOR",
+    )
+    hint_color: FloatVectorProperty(
+        name="Hint Color",
+        description="Hint Geometry color",
+        min=0,
+        max=1,
+        default=(0.5, 1, 0.5),
+        subtype="COLOR",
+    )
+    bad_segment_color: FloatVectorProperty(
+        name="Active Button Color",
+        description="Activated button color",
+        min=0,
+        max=1,
+        default=(1, 0.6, 0.2),
+        subtype="COLOR",
+    )
+    bad_segment_hint_color: FloatVectorProperty(
+        name="Bad Segment Hint",
+        description="Bad segment hint color",
+        min=0,
+        max=1,
+        default=(1, 0, 0),
+        subtype="COLOR",
+    )
 
     def draw(self, context):
         layout = self.layout
@@ -181,8 +332,31 @@ class ODC_AddonPreferences(AddonPreferences):
         layout.prop(self, "workflow")
         layout.prop(self, "debug")
 
+        ##################################
+        # draw polytrim preferences :
+        layout = self.layout
+        layout.label(text="Cut Mesh Preferences")
+        # layout.prop(self, "mat_lib")
+
+        ## Visualization
+        row = layout.row(align=True)
+        row.label(text="Visualization Settings")
+
+        row = layout.row(align=True)
+        row.prop(self, "menu_bg_color")
+        row.prop(self, "menu_border_color")
+        row.prop(self, "deact_button_color")
+        row.prop(self, "act_button_color")
+
+        ## Operator Defaults
+        # box = layout.box().column(align=False)
+        row = layout.row()
+        row.label(text="Operator Defaults")
+
+
 #############################################################################################
-#addon_prefs_odc operator :
+# addon_prefs_odc operator :
+
 
 class OPENDENTAL_OT_addon_prefs_odc(Operator):
     """Display example preferences"""
@@ -206,8 +380,10 @@ class OPENDENTAL_OT_addon_prefs_odc(Operator):
 
         return {"FINISHED"}
 
+
 #############################################################################################
-#load_post_method function :
+# load_post_method function :
+
 
 @persistent
 def load_post_method(dummy):
@@ -223,8 +399,10 @@ def load_post_method(dummy):
         print(splint.tooth_string)
         # splint.load_components_from_string(bpy.context.scene)
 
+
 #############################################################################################
-#save_pre_method function :
+# save_pre_method function :
+
 
 @persistent
 def save_pre_method(dummy):
@@ -236,8 +414,10 @@ def save_pre_method(dummy):
     for splint in bpy.context.scene.odc_splints:
         splint.save_components_to_string()
 
+
 #############################################################################################
-#pause_playback function :
+# pause_playback function :
+
 
 @persistent
 def pause_playback(scene):
@@ -246,8 +426,9 @@ def pause_playback(scene):
         scene.frame_set(scene.frame_current - 1)  # prevent replaying
         print("REACHED THE END")
 
+
 #############################################################################################
-#stop_playback function :
+# stop_playback function :
 @persistent
 def stop_playback(scene):
     if scene.frame_current == scene.frame_end:
@@ -258,7 +439,8 @@ def stop_playback(scene):
 
 # or restore frames:
 #############################################################################################
-#stop_playback_restore function :
+# stop_playback_restore function :
+
 
 @persistent
 def stop_playback_restore(scene):
@@ -267,22 +449,38 @@ def stop_playback_restore(scene):
         print("REACHED THE END")
 
 
-
-
-
 ############################################################################################
-#Registration :
+# Registration :
 ############################################################################################
 
-addon_modules = [panel, blockout_undercuts, model_ops,splint_2, odcutils, modops_props,classes,  crown, margin, bridge, splint,
-                implant, help, flexible_tooth, bracket_placement, denture_base, occlusion, ortho] 
+addon_modules = [
+    panel,
+    blockout_undercuts,
+    model_ops,
+    splint_2,
+    odcutils,
+    modops_props,
+    classes,
+    crown,
+    margin,
+    bridge,
+    splint,
+    implant,
+    help,
+    flexible_tooth,
+    bracket_placement,
+    denture_base,
+    occlusion,
+    ortho,
+    polytrim,
+]
 
 init_classes = [ODC_AddonPreferences, OPENDENTAL_OT_addon_prefs_odc]
 
 
-#Registration :
+# Registration :
 def register():
-    for module in addon_modules :
+    for module in addon_modules:
         module.register()
 
     for cl in init_classes:
@@ -304,6 +502,7 @@ def unregister():
 
     for module in reversed(addon_modules):
         module.unregister()
+
 
 if __name__ == "__main__":
     register()

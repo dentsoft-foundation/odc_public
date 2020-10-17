@@ -1,10 +1,10 @@
-#python imports :
+# python imports :
 import os
 
-#Blender imports :
+# Blender imports :
 import bpy
 
-#Addon imports :
+# Addon imports :
 from Addon_utils.odcutils import get_settings
 
 
@@ -82,6 +82,7 @@ class SCENE_UL_odc_splints(bpy.types.UIList):
             layout.alignment = "CENTER"
             layout.label(text="", icon_value="NODE")
 
+
 class UNDERCUTS_props(bpy.types.PropertyGroup):
 
     Models = ["Preview", "Solid"]
@@ -91,6 +92,7 @@ class UNDERCUTS_props(bpy.types.PropertyGroup):
         items.append(item)
 
     Modelsprop: bpy.props.EnumProperty(items=items, description="", default="Solid")
+
 
 class BASE_props(bpy.types.PropertyGroup):
 
@@ -102,6 +104,7 @@ class BASE_props(bpy.types.PropertyGroup):
 
     Modelsprop: bpy.props.EnumProperty(items=items, description="", default="Solid")
 
+
 class UNDERCUTS_view_props(bpy.types.PropertyGroup):
 
     colors = ["No color selected", "Violet", "Blue", "Pink", "Green"]
@@ -110,9 +113,16 @@ class UNDERCUTS_view_props(bpy.types.PropertyGroup):
         item = (str(colors[i]), str(colors[i]), str(""), int(i))
         items.append(item)
 
-    colorprop: bpy.props.EnumProperty(items=items, description="", default="No color selected")
+    colorprop: bpy.props.EnumProperty(
+        items=items, description="", default="No color selected"
+    )
 
-    survey_quaternion : bpy.props.FloatVectorProperty(name="survey_q", description="stors the surveing quaternion rotation", size=4, subtype='QUATERNION')
+    survey_quaternion: bpy.props.FloatVectorProperty(
+        name="survey_q",
+        description="stors the surveing quaternion rotation",
+        size=4,
+        subtype="QUATERNION",
+    )
 
 
 class OPENDENTAL_PT_ODCSettings(bpy.types.Panel):
@@ -158,7 +168,9 @@ class OPENDENTAL_PT_ODCSettings(bpy.types.Panel):
         col = self.layout.column(align=True)
         # col.label(text="Trace Tools")
         row = col.row()
-        row.prop(sce.odc_props, "show_modops", text="Model Operations", icon="LAYER_ACTIVE")
+        row.prop(
+            sce.odc_props, "show_modops", text="Model Operations", icon="LAYER_ACTIVE"
+        )
         row.prop(sce.odc_props, "show_teeth", text="Teeth", icon="LAYER_ACTIVE")
         row.prop(sce.odc_props, "show_implant", text="Implants", icon="LAYER_ACTIVE")
 
@@ -182,11 +194,11 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
 
         if not context.scene.odc_props.show_modops:
             return
-        
-        #Model operation property group :
+
+        # Model operation property group :
         modops_props = context.scene.ODC_modops_props
-        
-        #Selected icons :
+
+        # Selected icons :
         red_icon = "COLORSET_01_VEC"
         orange_icon = "COLORSET_02_VEC"
         green_icon = "COLORSET_03_VEC"
@@ -195,51 +207,60 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         yellow_point = "KEYTYPE_KEYFRAME_VEC"
         blue_point = "KEYTYPE_BREAKDOWN_VEC"
 
-        #Model operation panel layout :
+        # Model operation panel layout :
 
         layout = self.layout
 
-
         # Join / Link ops :
-        
+
         row = layout.row()
         row.label(text="Join/Link Models", icon=yellow_point)
         row = layout.row()
         row.operator("opendental.parent_models", text="Link", icon="LINKED")
-        row.operator("opendental.unparent_models", text="UnLink", icon="LIBRARY_DATA_OVERRIDE")
+        row.operator(
+            "opendental.unparent_models", text="UnLink", icon="LIBRARY_DATA_OVERRIDE"
+        )
         row.operator("opendental.join_models", text="Join", icon="SNAP_FACE")
         row.operator("opendental.separate_models", text="Separate", icon="SNAP_VERTEX")
-        
 
-        #align Model to front :
+        # align Model to front :
         layout.row().separator()
         row = layout.row()
         row.label(text="Align Models to front", icon=yellow_point)
         row = layout.row()
-        row.operator("opendental.align_to_front", text="Align to Front", icon="AXIS_FRONT")
-        row.operator("opendental.center_model", text="Center Model", icon="SNAP_FACE_CENTER")
-        row.operator("opendental.center_cursor", text="Center Cursor", icon="PIVOT_CURSOR")
-        
+        row.operator(
+            "opendental.align_to_front", text="Align to Front", icon="AXIS_FRONT"
+        )
+        row.operator(
+            "opendental.center_model", text="Center Model", icon="SNAP_FACE_CENTER"
+        )
+        row.operator(
+            "opendental.center_cursor", text="Center Cursor", icon="PIVOT_CURSOR"
+        )
 
         # Model Repair Tools :
         layout.row().separator()
         row = layout.row()
         row.label(text="Model Repair Tools", icon=yellow_point)
 
-        split = layout.split(factor=2/3, align=False)               
+        split = layout.split(factor=2 / 3, align=False)
         col = split.column()
 
         row = col.row(align=True)
-        row.operator("opendental.decimate_model", text="Decimate Model", icon="MOD_DECIM")
+        row.operator(
+            "opendental.decimate_model", text="Decimate Model", icon="MOD_DECIM"
+        )
         row.prop(modops_props, "decimate_ratio", text="")
         row = col.row()
         row.operator("opendental.fill", text="Fill", icon="OUTLINER_OB_LIGHTPROBE")
-        row.operator("opendental.retopo_smooth", text="Retopo Smooth", icon="BRUSH_SMOOTH")
-        try :
+        row.operator(
+            "opendental.retopo_smooth", text="Retopo Smooth", icon="BRUSH_SMOOTH"
+        )
+        try:
             bpy.context.view_layer.objects.active
-            if bpy.context.view_layer.objects.active.mode == "SCULPT" :
-                row.operator("sculpt.sample_detail_size", text = '', icon="EYEDROPPER")
-        except Exception :
+            if bpy.context.view_layer.objects.active.mode == "SCULPT":
+                row.operator("sculpt.sample_detail_size", text="", icon="EYEDROPPER")
+        except Exception:
             pass
 
         col = split.column()
@@ -247,7 +268,7 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         row.scale_y = 2
         row.operator("opendental.clean_model", text="Clean Model", icon="BRUSH_DATA")
 
-        #Cutting tools :
+        # Cutting tools :
         layout.row().separator()
         cutting_tool = modops_props.cutting_tool
 
@@ -264,14 +285,14 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         col.label(text="Select Cutting Tool :")
         col.prop(modops_props, "cutting_tool", text="")
 
-        if cutting_tool == "Curve Cutting Tool" :
+        if cutting_tool == "Curve Cutting Tool":
 
             row = layout.row()
             row.operator("opendental.make_curve")
             row.operator("opendental.curve_cut")
             row.operator("opendental.trim_model")
 
-        elif cutting_tool == "Square Cutting Tool" :
+        elif cutting_tool == "Square Cutting Tool":
 
             # Cutting mode column :
             col = split.column()
@@ -283,20 +304,28 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
             row.operator("opendental.square_cut_confirm")
             row.operator("opendental.square_cut_exit")
 
+        #######################################################################################################
+        # Polytrim Tool :
+        row = layout.row()
+        row.label(text="Polytrim Cutting Tool")
+        row = layout.row()
+        row.operator("cut_mesh.polytrim")
+        #######################################################################################################
+
         # Model Base  :
         layout.row().separator()
         row = layout.row()
         row.label(text="Model Base Tools", icon=yellow_point)
         row = layout.row()
         row.prop(modops_props, "base_height", text="Base Height")
-        row.operator("opendental.solid_hollow_models", text="Solid+Hollow", icon="FILE_VOLUME")
+        row.operator(
+            "opendental.solid_hollow_models", text="Solid+Hollow", icon="FILE_VOLUME"
+        )
         row = layout.row()
         row.operator("opendental.model_base", text="Model Base", icon="FILE_VOLUME")
-        row.operator(
-            "opendental.hollow_model", text="Hollow Model", icon="FILE_VOLUME"
-        )
+        row.operator("opendental.hollow_model", text="Hollow Model", icon="FILE_VOLUME")
         row.operator("opendental.remesh_model", text="Remesh Model", icon="VIEW_ORTHO")
-        
+
         # Model color :
         layout.row().separator()
         row = layout.row()
@@ -304,20 +333,17 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
 
         row = layout.row()
         row.operator("opendental.model_color", text="Add Color", icon="MATERIAL")
-        if bpy.context.active_object is not None :
+        if bpy.context.active_object is not None:
             ob = bpy.context.active_object
-            if ob.material_slots :
-                row.prop(ob.material_slots[0].material, "diffuse_color", text= "" )
-        else :
+            if ob.material_slots:
+                row.prop(ob.material_slots[0].material, "diffuse_color", text="")
+        else:
             row.prop(modops_props, "no_material_prop", text="")
 
-
-
-
         row.operator("opendental.remove_model_color", text="Remove Color")
-        
+
         ##############################################################################################
-        #Survey and Blockout Model
+        # Survey and Blockout Model
         layout.row().separator()
         layout.label(text="Survey undercut color:")
         row = layout.row(align=True)
@@ -325,7 +351,7 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         row.prop(props, "colorprop", text="")
         row.operator("opendental.view_silhouette_survey", text="Survey Model Undercuts")
 
-        split = layout.split(factor=2/3, align=False)               
+        split = layout.split(factor=2 / 3, align=False)
         col = split.column()
 
         row = col.row()
@@ -346,15 +372,15 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         row.prop(props, "Modelsprop", text="Select Algorithm")
         row.operator("opendental.view_blockout_undercuts", text="Create Blockout")
         """
-        #Model offset button+prop :
+        # Model offset button+prop :
         row = layout.row()
         row.prop(modops_props, "offset", text="")
         row.operator("opendental.add_offset", text="Offset")
         props = context.scene.ODC_modops_props
-        #BETA, requires further dev. WIP by Dr. Issam Dakir - devops not for public use
-        #Make splint2 :
+        # BETA, requires further dev. WIP by Dr. Issam Dakir - devops not for public use
+        # Make splint2 :
         layout.row().separator()
-        '''
+        """
         row = layout.row()
         row.label(text="Splint 2 beta", icon=yellow_point)
 
@@ -368,8 +394,8 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         row = layout.row()
         row.operator("odc2.splint_cutter", text="Outline Curve")
         row.operator("odc2.make_splint2", text="Splint2")
-        '''
-        #Add 3d text :
+        """
+        # Add 3d text :
         row = layout.row()
         row.label(text="3D Text", icon=yellow_point)
 
@@ -378,18 +404,19 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
 
         if bpy.context.object:
             ob = bpy.context.object
-            if ob.type == 'FONT' :
-                row.prop(ob.data, "size", text= "size" )
+            if ob.type == "FONT":
+                row.prop(ob.data, "size", text="size")
 
-        row.prop(props, "bold_toggle_prop", icon_only=True, icon='BOLD')
-        row.prop(props, "italic_toggle_prop", icon_only=True, icon='ITALIC')
-        row.prop(props, "underline_toggle_prop", icon_only=True, icon='UNDERLINE')
+        row.prop(props, "bold_toggle_prop", icon_only=True, icon="BOLD")
+        row.prop(props, "italic_toggle_prop", icon_only=True, icon="ITALIC")
+        row.prop(props, "underline_toggle_prop", icon_only=True, icon="UNDERLINE")
 
         row = layout.row()
         row.operator("odc2.add_3d_text", text="Add 3D Text")
         row.operator("odc2.embosse_3d_text", text="Embosse 3D text")
         row.operator("odc2.engrave_3d_text", text="Engrave 3D text")
-        
+
+
 class OPENDENTAL_PT_ODCTeeth(bpy.types.Panel):
     """ Teeth Panel """
 
@@ -541,7 +568,7 @@ class OPENDENTAL_PT_ODCImplants(bpy.types.Panel):
         col = row.column(align=True)
         col.operator("opendental.add_implant_restoration", text="Add Implant")
         col.operator("opendental.remove_implant_restoration", text="Remove Implant")
-        #col.operator("opendental.plan_restorations", text="Plan Multiple")
+        # col.operator("opendental.plan_restorations", text="Plan Multiple")
         col.label(text="Implant Library:")
         col.prop(context.scene.implant_lib_list, "Type")
 
@@ -555,9 +582,9 @@ class OPENDENTAL_PT_ODCImplants(bpy.types.Panel):
         # else:
         # row = layout.row()
         # row.label(text = "Implant library not loaded :-(")
-        #col = layout.column(align = True)
-        #col.prop(context.scene, "splint_shell_thickness")
-        #col.prop(context.scene, "splint_shell_offset")
+        # col = layout.column(align = True)
+        # col.prop(context.scene, "splint_shell_thickness")
+        # col.prop(context.scene, "splint_shell_offset")
 
         row = layout.row()
         row.label(text="Sleeve Parameters:")
@@ -589,21 +616,23 @@ class OPENDENTAL_PT_ODCImplants(bpy.types.Panel):
         row.operator("opendental.implant_guide_cylinder", text="Update Guide")
 
 
-
 class ImplantTypeListProperties(bpy.types.PropertyGroup):
     mode_options = [
-        ("mesh.primitive_plane_add", "Plane", '', 'MESH_PLANE', 0),
-        ("mesh.primitive_cube_add", "Cube", '', 'MESH_CUBE', 1)
+        ("mesh.primitive_plane_add", "Plane", "", "MESH_PLANE", 0),
+        ("mesh.primitive_cube_add", "Cube", "", "MESH_CUBE", 1),
     ]
 
-    Type : bpy.props.EnumProperty(
+    Type: bpy.props.EnumProperty(
         items=mode_options,
         description="implant library",
         default="mesh.primitive_plane_add",
-        update=None #execute_operator
+        update=None,  # execute_operator
     )
+
+
 def execute_operator(self, context):
-    eval('bpy.ops.' + self.Type + '()')
+    eval("bpy.ops." + self.Type + "()")
+
 
 class OPENDENTAL_PT_ODCBridges(bpy.types.Panel):
     """ Bridges Panel"""
@@ -729,16 +758,16 @@ class OPENDENTAL_PT_ODCSplints(bpy.types.Panel):
             row = layout.row()
             row.operator("opendental.splint_outline_erase", text="Erase Area")
 
-        col = layout.column(align = True)
+        col = layout.column(align=True)
         col.prop(context.scene, "splint_shell_thickness")
         col.prop(context.scene, "splint_shell_offset")
 
         layout.prop_search(context.scene, "splint_base_model", context.scene, "objects")
-        
+
         # Make Button
         row = layout.row()
         row.operator("opendental.splint_make", text="Finalize Splint")
-        
+
 
 class OPENDENTAL_PT_ODCOrtho(bpy.types.Panel):
     """ Ortho Panel """
@@ -840,7 +869,7 @@ class OPENDENTAL_PT_ODCOrtho(bpy.types.Panel):
 
 class OPENDENTAL_PT_ODCDentures(bpy.types.Panel):
     """ Dentures Panel """
-    
+
     bl_idname = "OPENDENTAL_PT_ODCDentures"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"  # blender 2.7 and lower = TOOLS
@@ -883,10 +912,8 @@ class OPENDENTAL_PT_ODCDentures(bpy.types.Panel):
         )
 
 
-
-
 def register():
-    
+
     bpy.utils.register_class(SCENE_UL_odc_teeth)
     bpy.utils.register_class(SCENE_UL_odc_implants)
     bpy.utils.register_class(SCENE_UL_odc_bridges)
@@ -900,16 +927,26 @@ def register():
     bpy.utils.register_class(OPENDENTAL_PT_ODCOrtho)
     bpy.utils.register_class(OPENDENTAL_PT_ODCDentures)
 
-    #implant library list
+    # implant library list
     bpy.utils.register_class(ImplantTypeListProperties)
-    bpy.types.Scene.implant_lib_list = bpy.props.PointerProperty(type=ImplantTypeListProperties)
-    #implant sleeve diameter
-    bpy.types.Scene.sleeve_diameter = bpy.props.StringProperty(name = "Diameter", description = "Set implant/sleeve diameter (mm).", default = "")
-    #bpy.types.Scene.sleeve_height = bpy.props.StringProperty(name = "Height", description = "Set implant/sleeve diameter.", default = "")
-    #implant splint/guide platform diameter and offset
-    bpy.types.Scene.platform_diameter = bpy.props.StringProperty(name = "Diameter", description = "Set guide platform diameter (mm).", default = "")
-    bpy.types.Scene.platform_height = bpy.props.StringProperty(name = "Height", description = "Set guide platform height (mm).", default = "")
-    bpy.types.Scene.platform_offset = bpy.props.StringProperty(name = "Offset", description = "Set guide platform offset (mm).", default = "")
+    bpy.types.Scene.implant_lib_list = bpy.props.PointerProperty(
+        type=ImplantTypeListProperties
+    )
+    # implant sleeve diameter
+    bpy.types.Scene.sleeve_diameter = bpy.props.StringProperty(
+        name="Diameter", description="Set implant/sleeve diameter (mm).", default=""
+    )
+    # bpy.types.Scene.sleeve_height = bpy.props.StringProperty(name = "Height", description = "Set implant/sleeve diameter.", default = "")
+    # implant splint/guide platform diameter and offset
+    bpy.types.Scene.platform_diameter = bpy.props.StringProperty(
+        name="Diameter", description="Set guide platform diameter (mm).", default=""
+    )
+    bpy.types.Scene.platform_height = bpy.props.StringProperty(
+        name="Height", description="Set guide platform height (mm).", default=""
+    )
+    bpy.types.Scene.platform_offset = bpy.props.StringProperty(
+        name="Offset", description="Set guide platform offset (mm).", default=""
+    )
 
     # bpy.utils.register_module(__name__)
     bpy.utils.register_class(UNDERCUTS_props)
@@ -918,16 +955,26 @@ def register():
     # Register model base props
     bpy.utils.register_class(BASE_props)
     bpy.types.Scene.BASE_props = bpy.props.PointerProperty(type=BASE_props)
-    #register base trim mode state var
-    bpy.types.Scene.base_trim_mode = bpy.props.BoolProperty(name="base_trim_mode", default=False)
-    #register splint mode state var
-    bpy.types.Scene.splint_mode = bpy.props.StringProperty(name="splint_mode", default="OBJECT") #other option is "PAINT" to unhide the add/erase buttons in weight paint mode
-    #register splint thickness input
-    bpy.types.Scene.splint_shell_thickness = bpy.props.StringProperty(name = "Thickness", description = "Set shell thickness in mm.", default = "3.0")
-    #register splint offset input
-    bpy.types.Scene.splint_shell_offset = bpy.props.StringProperty(name = "Offset", description = "Set shell offset from model in mm.", default = "0.5")
-    #register splint base model selection
-    bpy.types.Scene.splint_base_model = bpy.props.StringProperty(name = "Base Model", description = "Set the working dental model.")
+    # register base trim mode state var
+    bpy.types.Scene.base_trim_mode = bpy.props.BoolProperty(
+        name="base_trim_mode", default=False
+    )
+    # register splint mode state var
+    bpy.types.Scene.splint_mode = bpy.props.StringProperty(
+        name="splint_mode", default="OBJECT"
+    )  # other option is "PAINT" to unhide the add/erase buttons in weight paint mode
+    # register splint thickness input
+    bpy.types.Scene.splint_shell_thickness = bpy.props.StringProperty(
+        name="Thickness", description="Set shell thickness in mm.", default="3.0"
+    )
+    # register splint offset input
+    bpy.types.Scene.splint_shell_offset = bpy.props.StringProperty(
+        name="Offset", description="Set shell offset from model in mm.", default="0.5"
+    )
+    # register splint base model selection
+    bpy.types.Scene.splint_base_model = bpy.props.StringProperty(
+        name="Base Model", description="Set the working dental model."
+    )
 
     bpy.utils.register_class(UNDERCUTS_view_props)
     # Register UNDERCUTS_props
@@ -935,10 +982,13 @@ def register():
         type=UNDERCUTS_view_props
     )
 
-    bpy.types.Scene.pre_surveyed = bpy.props.BoolProperty(name="bool_pre_survey", description="A bool property", default = False)
+    bpy.types.Scene.pre_surveyed = bpy.props.BoolProperty(
+        name="bool_pre_survey", description="A bool property", default=False
+    )
+
 
 def unregister():
-    
+
     bpy.utils.unregister_class(OPENDENTAL_PT_ODCDentures)
     bpy.utils.unregister_class(OPENDENTAL_PT_ODCOrtho)
     bpy.utils.unregister_class(OPENDENTAL_PT_ODCSplints)
@@ -951,19 +1001,16 @@ def unregister():
     bpy.utils.unregister_class(SCENE_UL_odc_bridges)
     bpy.utils.unregister_class(SCENE_UL_odc_implants)
     bpy.utils.unregister_class(SCENE_UL_odc_teeth)
-    
-    
-     #implant library list
+
+    # implant library list
     del bpy.types.Scene.implant_lib_list
     bpy.utils.unregister_class(ImplantTypeListProperties)
-    #implant sleeve diameter
+    # implant sleeve diameter
     del bpy.types.Scene.sleeve_diameter
-    #implant splint/guide platform diameter, height, offset
+    # implant splint/guide platform diameter, height, offset
     del bpy.types.Scene.platform_diameter
     del bpy.types.Scene.platform_height
     del bpy.types.Scene.platform_offset
-    
-    
 
     bpy.utils.unregister_class(UNDERCUTS_props)
     # delete UNDERCUTS_props  on unregister
