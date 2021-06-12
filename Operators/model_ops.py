@@ -91,6 +91,84 @@ class OPENDENTAL_OT_separate_models(bpy.types.Operator):
 
 
 #######################################################################################
+# Selected models vertex grouping and join operator :
+class OPENDENTAL_OT_join_models_vertex_groups(bpy.types.Operator):
+    " Separate Groups "
+
+    bl_idname = "opendental.join_models_vertex_groups"
+    bl_label = "Join models as vertex groups"
+
+    def execute(self, context):
+
+        if bpy.context.selected_objects == []:
+
+            message = " Please select the Models to join!"
+            ShowMessageBox(message=message, icon="COLORSET_02_VEC")
+
+            return {"CANCELLED"}
+
+        else:
+
+            #OBJECT VERTEX JOINING OPERATOR
+            selection_names = bpy.context.selected_objects
+            for name in selection_names:
+                bpy.ops.object.select_all(action='DESELECT')
+                name.select_set(True)
+                bpy.context.view_layer.objects.active = name
+                bpy.ops.object.editmode_toggle()
+                bpy.ops.mesh.select_all(action='SELECT')
+                bpy.ops.object.vertex_group_add()
+                bpy.ops.object.vertex_group_assign()
+                bpy.context.active_object.vertex_groups[0].name = name.name
+                bpy.ops.object.editmode_toggle()
+
+            bpy.ops.object.select_all(action='DESELECT')
+            for name in selection_names:
+                name.select_set(True)
+            bpy.context.view_layer.objects.active = selection_names[0]
+            bpy.ops.object.join()
+
+            return {"FINISHED"}
+
+# Selected model with vertex groups separate operator:
+class OPENDENTAL_OT_separate_vertex_group_model(bpy.types.Operator):
+    " Separate Groups "
+
+    bl_idname = "opendental.separate_vertex_group_model"
+    bl_label = "Separate vertex groups"
+
+    def execute(self, context):
+
+        if bpy.context.selected_objects == []:
+
+            message = " Please select the Model to separate!"
+            ShowMessageBox(message=message, icon="COLORSET_02_VEC")
+
+            return {"CANCELLED"}
+
+        else:
+
+            #OBJECT VERTEX GROUP SEPARATING ALGORITHM
+            active_obj = bpy.context.view_layer.objects.active
+            bpy.ops.object.editmode_toggle()
+            for vertex_group in bpy.context.active_object.vertex_groups:
+                bpy.ops.mesh.select_all(action='DESELECT')
+                bpy.context.active_object.vertex_groups.active = vertex_group
+                bpy.ops.object.vertex_group_select()
+                bpy.ops.mesh.separate(type='SELECTED')
+
+            bpy.ops.object.editmode_toggle()
+
+            for obj in bpy.context.selected_objects:
+                bpy.context.view_layer.objects.active = obj
+                obj.name = bpy.context.active_object.vertex_groups.active.name
+
+                for vg in bpy.context.object.vertex_groups:
+                    obj.vertex_groups.remove(vg)
+
+            return {"FINISHED"}
+
+#######################################################################################
 # Parent model operator :
 
 
@@ -2336,6 +2414,8 @@ class ODC2_OT_engrave_3d_text(bpy.types.Operator):
 classes = [
     OPENDENTAL_OT_join_models,
     OPENDENTAL_OT_separate_models,
+    OPENDENTAL_OT_join_models_vertex_groups,
+    OPENDENTAL_OT_separate_vertex_group_model,
     OPENDENTAL_OT_parent_models,
     OPENDENTAL_OT_unparent_models,
     OPENDENTAL_OT_align_to_front,

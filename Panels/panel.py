@@ -222,7 +222,11 @@ class OPENDENTAL_PT_model_operations(bpy.types.Panel):
         )
         row.operator("opendental.join_models", text="Join", icon="SNAP_FACE")
         row.operator("opendental.separate_models", text="Separate", icon="SNAP_VERTEX")
-
+        row = layout.row()
+        row.operator("opendental.join_models_vertex_groups", text="Join models as vertex groups", icon="SNAP_FACE")
+        row = layout.row()
+        row.operator("opendental.separate_vertex_group_model", text="Separate vertex groups", icon="SNAP_VERTEX")
+        
         # align Model to front :
         layout.row().separator()
         row = layout.row()
